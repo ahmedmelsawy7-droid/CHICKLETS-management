@@ -2,17 +2,27 @@
   "name": "Chicklets Manager",
   "short_name": "Chicklets",
   "description": "Chicklets Fried Chicken Restaurant Management",
-  "id": "chicklets-manager",
-  "start_url": "/CHICKLETS-management/",
-  "scope": "/CHICKLETS-management/",
+  "id": "/CHICKLETS-management/",
+  "start_url": "https://ahmedmelsawy7-droid.github.io/CHICKLETS-management/",
+  "scope": "https://ahmedmelsawy7-droid.github.io/CHICKLETS-management/",
   "display": "standalone",
   "background_color": "#3b0764",
   "theme_color": "#3b0764",
   "orientation": "portrait",
   "lang": "en",
-  "categories": ["food","business"],
+  "categories": ["food", "business"],
   "icons": [
-    {"src": "https://ahmedmelsawy7-droid.github.io/CHICKLETS-management/icon-192.png","sizes": "192x192","type": "image/png","purpose": "any maskable"},
-    {"src": "https://ahmedmelsawy7-droid.github.io/CHICKLETS-management/icon-512.png","sizes": "512x512","type": "image/png","purpose": "any maskable"}
+    {
+      "src": "https://ahmedmelsawy7-droid.github.io/CHICKLETS-management/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://ahmedmelsawy7-droid.github.io/CHICKLETS-management/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }
