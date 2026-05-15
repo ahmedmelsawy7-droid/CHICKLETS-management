@@ -495,9 +495,10 @@ function checkPIN() {
     return;
   }
   if (v === correct) {
+    const target = pinTarget;
     closePIN();
-    if (pinTarget === "mgr") openMGR();
-    else if (pinTarget === "it") openIT();
+    if (target === "mgr") openMGR();
+    else if (target === "it") openIT();
   } else {
     document.getElementById("pin-err").style.display = "block";
     document.getElementById("pin-inp").value = "";
