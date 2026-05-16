@@ -407,12 +407,18 @@ let editSK = null;
 let aiMessages = [];
 
 // ── UTILS ──
-function today() { 
+function today() {
   const d = new Date();
   const y = d.getFullYear();
   const m = String(d.getMonth()+1).padStart(2,'0');
   const day = String(d.getDate()).padStart(2,'0');
   return y+'-'+m+'-'+day;
+}
+function fmtDate(d) {
+  if(!d) return '';
+  const parts = d.split('-');
+  if(parts.length !== 3) return d;
+  return parts[2]+'/'+parts[1]+'/'+parts[0];
 }
 function curMonth() { return new Date().toISOString().slice(0, 7); }
 function fmt(n) { return new Intl.NumberFormat("en-US").format(n || 0); }
@@ -594,6 +600,7 @@ function renderTab() {
   const c = document.getElementById("content");
   if (curTab === "entry") c.innerHTML = rEntry();
   else if (curTab === "monthly") c.innerHTML = rMonthly();
+  else if (curTab === "notes") c.innerHTML = rNotes();
   else c.innerHTML = rLog();
 }
 
@@ -642,12 +649,27 @@ function rEntry() {
       </div>
     </div>`;
   }).join("");
+  // Grand totals
+  const grandSales = Object.values(dailyVals['sales'] || {}).reduce((s,v)=>s+(parseFloat(v)||0),0);
+  const grandExp = Object.values(dailyVals['expenses'] || {}).reduce((s,v)=>s+(parseFloat(v)||0),0);
+  const grandBar = `<div style="display:flex;gap:8px;margin-bottom:10px">
+    <div style="flex:1;background:#f0fdf4;border-radius:11px;padding:10px;text-align:center">
+      <div style="font-size:10px;color:var(--sub);font-weight:600">📈 Sales</div>
+      <div style="font-weight:900;font-size:16px;color:var(--G)" id="grand-sales">${fmt(grandSales)} OMR</div>
+    </div>
+    <div style="flex:1;background:#fff7ed;border-radius:11px;padding:10px;text-align:center">
+      <div style="font-size:10px;color:var(--sub);font-weight:600">💸 Expenses</div>
+      <div style="font-weight:900;font-size:16px;color:var(--O)" id="grand-exp">${fmt(grandExp)} OMR</div>
+    </div>
+  </div>`;
   return `${remind}
     <div class="bar">
-      <input type="date" value="${dailyDate}" onchange="chDD(this.value)"/>
+      <input type="date" value="${dailyDate}" onchange="chDD(this.value)" style="max-width:160px"/>
+      <span style="font-size:13px;font-weight:700;color:var(--sub)">${fmtDate(dailyDate)}</span>
       <button class="svbtn svbtn-p" onclick="saveDL()">💾 ${ex ? "Update" : "Save"}</button>
     </div>
     ${ex ? `<div class="fnote" style="background:#eff6ff;color:var(--B)">✏️ Existing data — will update</div>` : ""}
+    ${grandBar}
     ${secs}`;
 }
 
@@ -660,6 +682,13 @@ function setDV(type, sub, val) {
   const e2 = document.getElementById("dt2-" + type);
   if (e1) e1.textContent = f;
   if (e2) e2.textContent = f;
+  // Update grand totals
+  const gs = Object.values(dailyVals['sales'] || {}).reduce((s,v)=>s+v,0);
+  const ge = Object.values(dailyVals['expenses'] || {}).reduce((s,v)=>s+v,0);
+  const gs_el = document.getElementById("grand-sales");
+  const ge_el = document.getElementById("grand-exp");
+  if(gs_el) gs_el.textContent = fmt(gs)+" OMR";
+  if(ge_el) ge_el.textContent = fmt(ge)+" OMR";
 }
 
 function togS(k) {
@@ -769,7 +798,7 @@ function saveML() {
   const log = monthLogs.find(l => l.month === monthDate);
   if (log) sbSaveMonthLog(curBranch.id, log);
   monthVals = {}; monthSts = {}; monthDate = curMonth(); initMV();
-  showTab("entry");
+  showTab("log");
 }
 
 // ── LOG ──
@@ -813,6 +842,49 @@ function rLog() {
   }).join("");
 }
 
+function rNotes(){
+  const key = curBranch.id + "_notes";
+  const notes = JSON.parse(localStorage.getItem(key) || "[]");
+  const rows = notes.length ? notes.map((n,i) => `
+    <div style="background:var(--card);border-radius:12px;padding:12px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,0.06)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1">
+          <div style="font-size:12px;color:var(--sub);margin-bottom:4px">📅 ${fmtDate(n.date)}</div>
+          <div style="font-size:14px;font-weight:600">${n.text}</div>
+        </div>
+        <button onclick="deleteNote(${i})" style="background:#fef2f2;color:var(--R);border:none;border-radius:8px;padding:4px 8px;font-size:11px;cursor:pointer;margin-left:8px">🗑️</button>
+      </div>
+    </div>`).join("") : `<div class="empty"><div style="font-size:38px;margin-bottom:8px">📝</div><div>No notes yet</div></div>`;
+  return `<div class="card">
+    <div class="card-title">📝 Add Note to Manager</div>
+    <textarea id="note-text" placeholder="Write your note here..." style="width:100%;padding:10px;border:2px solid var(--bdr);border-radius:10px;font-family:inherit;font-size:14px;min-height:80px;outline:none;resize:none" onfocus="this.style.borderColor='var(--P)'" onblur="this.style.borderColor='var(--bdr)'"></textarea>
+    <button class="svbtn svbtn-p" style="width:100%;margin-top:8px" onclick="saveNote()">📤 Send Note</button>
+  </div>
+  <div class="card"><div class="card-title">📋 Previous Notes</div>${rows}</div>`;
+}
+
+function saveNote(){
+  const text = (document.getElementById("note-text")||{value:""}).value.trim();
+  if(!text){toast("Write something first","#ef4444");return;}
+  const key = curBranch.id + "_notes";
+  const notes = JSON.parse(localStorage.getItem(key) || "[]");
+  notes.unshift({text, date: today(), branch: bn(curBranch)});
+  localStorage.setItem(key, JSON.stringify(notes));
+  sbSaveSettings(key, notes);
+  toast("Note sent ✓");
+  document.getElementById("note-text").value = "";
+  renderTab();
+}
+function deleteNote(i){
+  const key = curBranch.id + "_notes";
+  const notes = JSON.parse(localStorage.getItem(key) || "[]");
+  notes.splice(i,1);
+  localStorage.setItem(key, JSON.stringify(notes));
+  sbSaveSettings(key, notes);
+  toast("Deleted","#ef4444");
+  renderTab();
+}
+
 function delDL(id) {
   openModal(`<div style="text-align:center;padding:10px 0">
     <div style="font-size:40px;margin-bottom:10px">🗑️</div>
@@ -848,6 +920,31 @@ function openMGR() {
 }
 function exitMGR() { showScreen("BS"); renderBS(); }
 
+function sendWhatsApp(){
+  const todayStr = today();
+  let msg = "🍗 *Chicklets Daily Report*
+";
+  msg += "📅 "+fmtDate(todayStr)+"
+";
+  msg += "━━━━━━━━━━━━━━━
+";
+  let total = 0;
+  branches.forEach(b => {
+    const bd = getBD(b.id);
+    const tlog = bd.dl.find(l=>l.date===todayStr);
+    let s = 0;
+    if(tlog) Object.entries(tlog.data||{}).forEach(([t,subs])=>{if(t==="sales")Object.values(subs||{}).forEach(v=>s+=v);});
+    msg += b.icon+" *"+bn(b)+"*: "+fmt(s)+" OMR "+(tlog?"✅":"⚠️ No data")+"
+";
+    total += s;
+  });
+  msg += "━━━━━━━━━━━━━━━
+";
+  msg += "💰 *Total: "+fmt(total)+" OMR*";
+  const url = "https://wa.me/?text="+encodeURIComponent(msg);
+  window.open(url, "_blank");
+}
+
 function showMTab(tab) {
   curMTab = tab;
   document.querySelectorAll(".mgr-nav .nvb").forEach(b => { b.classList.remove("active"); b.style.color = ""; b.style.borderBottomColor = ""; });
@@ -862,6 +959,8 @@ function renderMTab() {
   else if (curMTab === "branch") c.innerHTML = rMgrBranch();
   else if (curMTab === "compare") c.innerHTML = rMgrCompare();
   else if (curMTab === "ai") c.innerHTML = rMgrAI();
+  else if (curMTab === "transfers") c.innerHTML = rMgrTransfers();
+  else if (curMTab === "mgrNotes") c.innerHTML = rMgrNotes();
 }
 
 // ── HELPERS ──
@@ -879,12 +978,33 @@ function rMgrOverview() {
   const rows = branches.map(b => { const { s, e, f, net } = getBranchTotals(b.id); gs += s; ge += e; gf += f; return { b, s, e, f, net }; });
   const gn = gs - ge - gf;
   let obc = window._obc || {}; window._obc = obc;
+  // Today's totals
+  const todayStr = today();
+  let todaySales = 0, todayBranches = 0;
+  branches.forEach(b => {
+    const bd = getBD(b.id);
+    const tlog = bd.dl.find(l => l.date === todayStr);
+    if(tlog) {
+      todayBranches++;
+      Object.entries(tlog.data || {}).forEach(([type, subs]) => {
+        if(type === 'sales') Object.values(subs||{}).forEach(v => todaySales += v);
+      });
+    }
+  });
+  const todayBar = `<div style="background:rgba(255,255,255,0.15);border-radius:13px;padding:11px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">
+    <div><div style="color:#6ee7b7;font-size:11px;font-weight:700">📅 TODAY ${fmtDate(todayStr)}</div>
+    <div style="color:#fff;font-weight:900;font-size:22px">${fmt(todaySales)} OMR</div></div>
+    <div style="text-align:right"><div style="color:#6ee7b7;font-size:11px">${todayBranches}/${branches.length} branches entered</div>
+    <div style="font-size:20px">${todayBranches === branches.length ? "✅" : "⚠️"}</div></div>
+  </div>`;
+
   const hero = `<div class="hero-g">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px">
       <div><div style="color:#fff;font-weight:900;font-size:17px">Chicklets 🍗</div>
       <div style="color:#6ee7b7;font-size:11px">${branches.length} branches · ${curMonth()}</div></div>
       <img src="${LOGO_B64}" style="width:48px;height:48px;border-radius:12px;background:#fff;padding:2px;object-fit:contain"/>
     </div>
+    ${todayBar}
     <div class="stats-grid">
       <div class="stat"><div class="stat-v">${fmt(gs)}</div><div class="stat-l">📈 Total Sales</div></div>
       <div class="stat"><div class="stat-v">${fmt(ge)}</div><div class="stat-l">💸 Total Expenses</div></div>
@@ -920,7 +1040,8 @@ function rMgrOverview() {
       </div></div>` : ""}
     </div>`;
   }).join("");
-  return `<button class="pdf-btn" onclick="window.print()">🖨️ Print PDF Report</button>` + hero + cards;
+  const waBtn = `<button onclick="sendWhatsApp()" style="width:100%;padding:11px;background:linear-gradient(135deg,#25d366,#128c7e);border:none;border-radius:12px;color:#fff;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:8px">📱 Send WhatsApp Report</button>`;
+  return waBtn + `<button class="pdf-btn" onclick="window.print()">🖨️ Print PDF Report</button>` + hero + cards;
 }
 
 // ── FULL REPORT ──
@@ -1029,7 +1150,23 @@ function rMgrCompare() {
   const grand = `<tr style="background:#f0fdf4"><td style="padding:10px;font-weight:900;font-size:13px;border-top:3px solid var(--G)">💰 Total Net</td>
     ${grandTotals.map(d => `<td style="padding:10px;text-align:center;font-weight:900;font-size:13px;color:${d.net >= 0 ? "var(--G)" : "var(--R)"};border-top:3px solid var(--G)">${fmt(d.net)}</td>`).join("")}
   </tr>`;
+  // Week analysis
+  const allDates = [];
+  branches.forEach(b => { const bd=getBD(b.id); bd.dl.forEach(l=>allDates.push(l.date)); });
+  const minDate = allDates.sort()[0] || today();
+  
   return `<button class="pdf-btn" onclick="window.print()">🖨️ Print PDF Report</button>
+    <div class="card" style="margin-bottom:12px">
+      <div style="font-weight:800;font-size:14px;margin-bottom:10px;color:#065f46">📅 Custom Date Range</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div style="flex:1;min-width:130px"><div style="font-size:11px;color:var(--sub);margin-bottom:4px">From</div>
+        <input type="date" id="cmp-from" value="${minDate}" style="width:100%;padding:8px;border:2px solid var(--bdr);border-radius:9px;font-family:inherit;font-size:13px"/></div>
+        <div style="flex:1;min-width:130px"><div style="font-size:11px;color:var(--sub);margin-bottom:4px">To</div>
+        <input type="date" id="cmp-to" value="${today()}" style="width:100%;padding:8px;border:2px solid var(--bdr);border-radius:9px;font-family:inherit;font-size:13px"/></div>
+        <button onclick="showWeekCompare()" class="svbtn svbtn-g" style="margin-top:16px">📊 Compare Weeks</button>
+      </div>
+      <div id="week-compare-result" style="margin-top:12px"></div>
+    </div>
     <div class="card" style="overflow-x:auto">
       <div style="font-weight:800;font-size:14px;margin-bottom:12px;color:#065f46">📅 Month by Month Comparison</div>
       <table class="compare-tbl">
@@ -1053,6 +1190,7 @@ function rMgrAI() {
       <button class="ai-qbtn" onclick="askAI('Which branch performs best and worst? Why?')">🏪 Compare Branches</button>
       <button class="ai-qbtn" onclick="askAI('Suggest 3 promotions I should run this week')">💡 Promotions</button>
       <button class="ai-qbtn" onclick="askAI('Are expenses under control? What should I cut?')">💸 Cost Analysis</button>
+      <button class="ai-qbtn" onclick="runSmartAlerts()">🚨 Smart Alerts</button>
     </div>
   </div>
   <div class="ai-msgs" id="ai-messages"></div>
@@ -1116,7 +1254,37 @@ async function askAI(question) {
   addAIMessage("user", question);
   addAIMessage("assistant", "", true);
   const bizData = getBizData();
-  const systemPrompt = `You are a sharp restaurant business analyst for Chicklets Fried Chicken in Muscat, Oman. Be concise, specific with numbers, actionable. Use OMR currency. Max 150 words per response. Data: ${JSON.stringify(bizData)}`;
+  // Build weekly data
+  const weeks = {};
+  branches.forEach(b => {
+    const bd = getBD(b.id);
+    bd.dl.forEach(log => {
+      const d = new Date(log.date);
+      const weekNum = Math.floor((d - new Date(d.getFullYear(),0,1))/(7*24*3600*1000));
+      const wk = d.getFullYear()+"_W"+weekNum;
+      if(!weeks[wk]) weeks[wk] = {start:log.date,end:log.date,sales:0,expenses:0,days:0};
+      if(log.date < weeks[wk].start) weeks[wk].start = log.date;
+      if(log.date > weeks[wk].end) weeks[wk].end = log.date;
+      Object.entries(log.data||{}).forEach(([type,subs])=>{
+        Object.values(subs||{}).forEach(v=>{
+          if(type==="sales") weeks[wk].sales+=v;
+          if(type==="expenses") weeks[wk].expenses+=v;
+        });
+      });
+      weeks[wk].days++;
+    });
+  });
+  const weeklyData = Object.entries(weeks).sort().slice(-8).map(([k,v])=>({week:k,...v}));
+  const todayEvents = {
+    isRamadan: false,
+    isSummer: new Date().getMonth()>=5&&new Date().getMonth()<=8,
+    dayOfWeek: ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date().getDay()],
+    month: new Date().toLocaleString('en',{month:'long'})
+  };
+  const systemPrompt = `You are a sharp restaurant business analyst for Chicklets Fried Chicken in Muscat, Oman. Be concise, specific with numbers, actionable. Use OMR currency. Max 150 words per response.
+Current context: ${JSON.stringify(todayEvents)}
+Weekly performance (last 8 weeks): ${JSON.stringify(weeklyData)}
+Business data: ${JSON.stringify(bizData)}`;
   aiMessages.push({ role: "user", content: question });
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -1204,6 +1372,17 @@ function renderIT() {
     ${buildCatEditor("dc", DEF_DC, "Daily")}
     ${buildCatEditor("mc", DEF_MC, "Monthly")}
     <div class="it-card">
+      <div class="it-card-title">🤖 Claude AI Settings</div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:12px;color:var(--sub);font-weight:600;margin-bottom:6px">Claude API Key</div>
+        <div class="pass-row">
+          <input class="pass-inp" type="password" id="claude-key-inp" placeholder="sk-ant-api03-..." value="${localStorage.getItem('claudeKey')||''}"/>
+          <button class="pass-btn" style="background:#6366f1" onclick="saveClaudeKey()">Save</button>
+        </div>
+        <div style="font-size:11px;color:${localStorage.getItem('claudeKey')?'var(--G)':'var(--R)'};margin-top:4px">${localStorage.getItem('claudeKey')?"✅ API Key saved":"❌ No API Key — AI features disabled"}</div>
+      </div>
+    </div>
+    <div class="it-card">
       <div class="it-card-title">🔐 Passwords</div>
       <div style="margin-bottom:14px">
         <div style="font-size:12px;color:var(--sub);font-weight:600;margin-bottom:6px">👔 Manager Password</div>
@@ -1216,11 +1395,26 @@ function renderIT() {
     </div>
     <div class="it-card">
       <div class="it-card-title">📤 Export & Import</div>
-      <button onclick="exportAll()" style="width:100%;padding:11px;border:2px solid var(--G);border-radius:10px;background:#ecfdf5;color:var(--G);font-family:inherit;font-weight:700;cursor:pointer;margin-bottom:8px">📤 Export All Data</button>
+      <button onclick="exportAll()" style="width:100%;padding:11px;border:2px solid var(--G);border-radius:10px;background:#ecfdf5;color:var(--G);font-family:inherit;font-weight:700;cursor:pointer;margin-bottom:8px">📤 Export JSON (Backup)</button>
+      <button onclick="exportToExcel()" style="width:100%;padding:11px;border:2px solid var(--B);border-radius:10px;background:#eff6ff;color:var(--B);font-family:inherit;font-weight:700;cursor:pointer;margin-bottom:8px">📊 Export Excel (Accountant)</button>
       <label style="width:100%;padding:11px;border:2px solid var(--B);border-radius:10px;background:#eff6ff;color:var(--B);font-family:inherit;font-weight:700;cursor:pointer;display:block;text-align:center">
         📥 Import from POS (Excel)
         <input type="file" accept=".xls,.xlsx,.csv" onchange="importPOS(this)" style="display:none"/>
       </label>
+    </div>
+    <div class="it-card">
+      <div class="it-card-title">🎯 Monthly Sales Target</div>
+      <div style="font-size:12px;color:var(--sub);margin-bottom:8px">Set monthly target for each branch</div>
+      ${branches.map(b => {
+        const tkey = b.id+"_target";
+        const target = localStorage.getItem(tkey)||"";
+        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:18px">${b.icon}</span>
+          <span style="font-weight:600;font-size:13px;flex:1">${bn(b)}</span>
+          <input class="sinp" type="number" id="target-${b.id}" value="${target}" placeholder="OMR" style="width:100px"/>
+          <button class="sb sb-g" onclick="saveTarget('${b.id}')">Save</button>
+        </div>`;
+      }).join("")}
     </div>
     <div class="it-card">
       <div class="it-card-title" style="color:var(--R)">🗑️ Clear All Data</div>
@@ -1338,6 +1532,22 @@ function addSubG(sk, tk) {
   });
   toast("Added to all branches ✓"); renderIT();
 }
+function saveTarget(bid){
+  const v = parseFloat((document.getElementById("target-"+bid)||{value:0}).value)||0;
+  if(!v){toast("Enter target amount","#ef4444");return;}
+  localStorage.setItem(bid+"_target", v);
+  toast("Target saved ✓");
+}
+
+function saveClaudeKey(){
+  const v = (document.getElementById("claude-key-inp")||{value:""}).value.trim();
+  if(!v){toast("Enter API Key","#ef4444");return;}
+  claudeKey = v;
+  localStorage.setItem("claudeKey", v);
+  toast("API Key saved ✓");
+  renderIT();
+}
+
 function changePass(type) {
   const v = (document.getElementById("new-" + type + "-pass") || { value: "" }).value.trim();
   if (!v || v.length < 3) { toast("Enter valid password (min 3 chars)", "#ef4444"); return; }
