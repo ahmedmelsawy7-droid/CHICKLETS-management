@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="theme-color" content="#3b0764"/>
@@ -24,10 +24,10 @@ input[type="number"]{-moz-appearance:textfield;}
   --bg:#f5f0ff;--card:#fff;--text:#1e293b;--sub:#64748b;--bdr:#e2e8f0;
 }
 
-body{font-family:-apple-system,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;direction:ltr;}
+body{font-family:-apple-system,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;direction:ltr;max-width:100vw;overflow-x:hidden;}
 
 /* ── BRANCH SCREEN ── */
-#BS{position:fixed;inset:0;background:linear-gradient(160deg,var(--P),var(--P2) 60%,var(--P3));display:flex;flex-direction:column;align-items:center;justify-content:flex-start;z-index:100;padding:36px 20px 24px;overflow-y:auto;}
+#BS{position:fixed;inset:0;background:linear-gradient(160deg,var(--P),var(--P2) 60%,var(--P3));display:flex;flex-direction:column;align-items:center;justify-content:flex-start;z-index:100;padding:36px 16px 24px;overflow-y:auto;overflow-x:hidden;width:100%;}
 .bs-logo{width:110px;height:110px;border-radius:24px;object-fit:contain;background:#fff;padding:5px;box-shadow:0 12px 40px rgba(0,0,0,0.45);margin-bottom:12px;}
 .bs-brand{color:#fff;font-size:30px;font-weight:900;}
 .bs-tag{color:#c4b5fd;font-size:13px;margin-bottom:28px;}
@@ -69,7 +69,7 @@ body{font-family:-apple-system,"Segoe UI",Arial,sans-serif;background:var(--bg);
 .nav::-webkit-scrollbar{display:none;}
 .nvb{flex:1;min-width:70px;padding:10px 3px;border:none;background:none;cursor:pointer;font-family:inherit;font-size:11px;font-weight:700;color:var(--sub);border-bottom:3px solid transparent;white-space:nowrap;}
 .nvb.active{color:var(--P);border-bottom-color:var(--P);}
-.content{padding:13px;max-width:640px;margin:0 auto;padding-bottom:30px;}
+.content{padding:13px;max-width:100%;margin:0 auto;padding-bottom:30px;overflow-x:hidden;}
 
 /* ── CARDS & COMPONENTS ── */
 .card{background:var(--card);border-radius:14px;padding:14px;margin-bottom:11px;box-shadow:0 2px 8px rgba(0,0,0,0.06);}
@@ -245,11 +245,10 @@ body{font-family:-apple-system,"Segoe UI",Arial,sans-serif;background:var(--bg);
     <button class="hbtn" onclick="exitMGR()">Exit</button>
   </div>
   <div class="nav mgr-nav">
-    <button class="nvb active" id="mn-overview" onclick="showMTab('overview')">Overview</button>
-    <button class="nvb" id="mn-report" onclick="showMTab('report')">Report</button>
-    <button class="nvb" id="mn-branch" onclick="showMTab('branch')">Branch</button>
-    <button class="nvb" id="mn-compare" onclick="showMTab('compare')">Compare</button>
-    <button class="nvb" id="mn-ai" onclick="showMTab('ai')">AI</button>
+    <button class="nvb active" id="mn-overview" onclick="showMTab('overview')">📊 Overview</button>
+    <button class="nvb" id="mn-report" onclick="showMTab('report')">📈 Report</button>
+    <button class="nvb" id="mn-ai" onclick="showMTab('ai')">🤖 AI</button>
+    <button class="nvb" id="mn-transfers" onclick="showMTab('transfers')">💵 Transfers</button>
   </div>
   <div class="content mgr-content" id="mgr-content"></div>
 </div>
@@ -384,7 +383,7 @@ if (!branches) {
 let itPass = localStorage.getItem("itPass") || "1234";
 let mgrPass = localStorage.getItem("mgrPass") || "0000";
 let clearPass = localStorage.getItem("clearPass") || "DELETE123";
-let claudeKey = localStorage.getItem("claudeKey") || "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";
+let claudeKey = localStorage.getItem("claudeKey") || "";
 
 let curBranch = null;
 let pinTarget = null;
@@ -953,14 +952,13 @@ function showMTab(tab) {
   renderMTab();
 }
 function renderMTab() {
-  const c = document.getElementById("mgr-content");
+  var c = document.getElementById("mgr-content");
+  if(!c) return;
   if (curMTab === "overview") c.innerHTML = rMgrOverview();
   else if (curMTab === "report") c.innerHTML = rMgrReport();
-  else if (curMTab === "branch") c.innerHTML = rMgrBranch();
-  else if (curMTab === "compare") c.innerHTML = rMgrCompare();
   else if (curMTab === "ai") c.innerHTML = rMgrAI();
   else if (curMTab === "transfers") c.innerHTML = rMgrTransfers();
-  else if (curMTab === "mgrNotes") c.innerHTML = rMgrNotes();
+  else c.innerHTML = rMgrOverview();
 }
 
 // ── HELPERS ──
@@ -1045,15 +1043,37 @@ function rMgrOverview() {
 }
 
 // ── FULL REPORT ──
+function setRptBranch(bid) { window._rptBranch = bid; renderMTab(); }
+
+function buildBranchSel() {
+  var branchFilter = window._rptBranch || "all";
+  var div = document.createElement("div");
+  div.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px";
+  var btns = [{id:"all",icon:"",name:"All"}].concat(branches.map(function(b){return {id:b.id,icon:b.icon,name:bn(b)};}));
+  btns.forEach(function(item){
+    var btn = document.createElement("button");
+    var active = branchFilter === item.id;
+    btn.textContent = item.icon ? item.icon+" "+item.name : item.name;
+    btn.style.cssText = "padding:8px 14px;border-radius:10px;border:2px solid "+(active?"var(--G)":"var(--bdr)")+";background:"+(active?"#f0fdf4":"#fff")+";font-family:inherit;font-weight:700;font-size:12px;cursor:pointer;color:"+(active?"var(--G)":"var(--sub)");
+    btn.onclick = function(){ setRptBranch(item.id); };
+    div.appendChild(btn);
+  });
+  return div.outerHTML;
+}
+
 function rMgrReport() {
-  const allM = new Set();
-  branches.forEach(b => { const bd = getBD(b.id); bd.dl.forEach(l => allM.add(l.date.slice(0, 7))); bd.ml.forEach(l => allM.add(l.month)); });
+  var branchFilter = window._rptBranch || "all";
+  var filteredBranches = branchFilter === "all" ? branches : branches.filter(function(b){ return b.id === branchFilter; });
+  var branchSel = buildBranchSel();
+
+  var allM = new Set();
+  filteredBranches.forEach(function(b) { var bd = getBD(b.id); bd.dl.forEach(function(l){allM.add(l.date.slice(0,7));}); bd.ml.forEach(function(l){allM.add(l.month);}); });
   const months = Array.from(allM).sort().reverse();
-  if (!months.length) return `<div class="empty"><div style="font-size:38px;margin-bottom:8px">📊</div><div>No data available</div></div>`;
+  if (!months.length) return branchSel + `<div class="empty"><div style="font-size:38px;margin-bottom:8px">📊</div><div>No data available</div></div>`;
   let omr = window._omr || {}; window._omr = omr;
-  return months.map(m => {
+  return branchSel + months.map(m => {
     let gs = 0, ge = 0, gf = 0;
-    const brows = branches.map(b => {
+    const brows = filteredBranches.map(function(b) {
       const bd = getBD(b.id); let s = 0, e = 0, f = 0; const subT = { sales: {}, expenses: {} };
       bd.dl.filter(l => l.date.startsWith(m)).forEach(log => { Object.entries(log.data || {}).forEach(([type, subs]) => { Object.entries(subs || {}).forEach(([sub, val]) => { if (type === "sales") { s += val; subT.sales[sub] = (subT.sales[sub] || 0) + val; } else if (type === "expenses") { e += val; subT.expenses[sub] = (subT.expenses[sub] || 0) + val; } }); }); });
       const ml = bd.ml.find(l => l.month === m); const fd = (ml&&ml.data&&ml.data.fixed) || {}; const fs = (ml&&ml.status&&ml.status.fixed||{}) || {};
@@ -1099,85 +1119,48 @@ function rMgrReport() {
 }
 
 // ── BRANCH DETAIL ──
-function rMgrBranch() {
-  const sel = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-    ${branches.map(b => `<button onclick="mgrSelBranch=branches.find(x=>x.id==='${b.id}');renderMTab()" style="flex:1;padding:10px;border:2px solid ${(mgrSelBranch&&mgrSelBranch.id) === b.id ? "var(--G)" : "var(--bdr)"};border-radius:10px;background:${(mgrSelBranch&&mgrSelBranch.id) === b.id ? "#f0fdf4" : "#fff"};font-family:inherit;font-weight:700;font-size:12px;cursor:pointer;color:${(mgrSelBranch&&mgrSelBranch.id) === b.id ? "var(--G)" : "var(--sub)"}">${b.icon} ${bn(b)}</button>`).join("")}
-  </div>`;
-  if (!mgrSelBranch) return sel + `<div class="empty"><div style="font-size:38px">👆</div><div>Select a branch</div></div>`;
-  const bd = getBD(mgrSelBranch.id);
-  var _s = new Set(); getBD(mgrSelBranch.id).dl.forEach(function(l){_s.add(l.date.slice(0,7));}); getBD(mgrSelBranch.id).ml.forEach(function(l){_s.add(l.month);}); const months = Array.from(_s).sort().reverse();
-  if (!months.length) return sel + `<div class="empty"><div style="font-size:38px">📭</div><div>No data for this branch</div></div>`;
-  const report = months.map(m => {
-    const mDays = bd.dl.filter(l => l.date.startsWith(m));
-    const dayT = { sales: 0, expenses: 0 }; const subT = { sales: {}, expenses: {} };
-    mDays.forEach(log => { Object.entries(log.data || {}).forEach(([type, subs]) => { Object.entries(subs || {}).forEach(([sub, val]) => { dayT[type] = (dayT[type] || 0) + val; if (!subT[type]) subT[type] = {}; subT[type][sub] = (subT[type][sub] || 0) + val; }); }); });
-    const mLog = bd.ml.find(l => l.month === m); const fd = mLog?.(data&&data.fixed||{}) || {}; const fs = mLog?.(status&&status.fixed||{}) || {};
-    const ft = Object.values(fd).reduce((s, v) => s + v, 0); const net = (dayT.sales || 0) - (dayT.expenses || 0) - ft;
-    const daySecs = Object.entries(DEF_DC).map(([tk, cat]) => { const subs = subT[tk] || {}; if (!Object.values(subs).some(v => v > 0)) return ""; const rows = Object.entries(subs).filter(([, v]) => v > 0).map(([sub, val]) => `<div class="rrow"><span style="color:var(--sub)">${sub}</span><span style="font-weight:700;color:${cat.color}">${fmt(val)} OMR</span></div>`).join(""); return `<div class="rsec"><div class="rsec-t" style="color:${cat.color}">${cat.icon} ${cat.en} <span style="font-size:11px;background:${cat.color}18;padding:2px 6px;border-radius:6px">${fmt(dayT[tk] || 0)}</span></div>${rows}</div>`; }).join("");
-    const frows = Object.entries(fd).filter(([, v]) => v > 0).map(([sub, val]) => { const ip = (fs[sub] || "pending") === "paid"; return `<div class="rrow"><span style="color:var(--sub)">${sub}</span><div style="display:flex;align-items:center;gap:5px"><span style="font-weight:700;color:#7c3aed">${fmt(val)} OMR</span><span style="font-size:10px;padding:1px 6px;border-radius:5px;background:${ip ? "#ecfdf5" : "#fffbeb"};color:${ip ? "#10b981" : "#d97706"};font-weight:700">${ip ? "✅" : "⏳"}</span></div></div>`; }).join("");
-    return `<div class="rcard"><div style="font-weight:800;font-size:14px;margin-bottom:12px;color:var(--P)">📅 ${m} · ${mDays.length} days</div>${daySecs}${ft > 0 ? `<div class="rsec"><div class="rsec-t" style="color:#7c3aed">📌 Fixed <span style="background:#f5f3ff;color:#7c3aed;padding:2px 6px;border-radius:6px;font-size:11px">${fmt(ft)}</span></div>${frows}</div>` : ""}<div class="rnet" style="background:${net >= 0 ? "#f0fdf4" : "#fef2f2"}"><div><div style="font-size:11px;color:var(--sub)">Monthly Net</div><div style="font-weight:900;font-size:18px;color:${net >= 0 ? "var(--G)" : "var(--R)"}">${fmt(Math.abs(net))} OMR</div></div><span style="font-size:30px">${net >= 0 ? "💰" : "⚠️"}</span></div></div>`;
-  }).join("");
-  return sel + report;
-}
-
-// ── COMPARE ──
-function rMgrCompare() {
-  const months = []; const now = new Date();
-  for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push(d.toISOString().slice(0, 7)); }
-  const rows = branches.map(b => {
-    const bd = getBD(b.id);
-    const mData = months.map(m => {
-      let s = 0, e = 0, f = 0;
-      bd.dl.filter(l => l.date.startsWith(m)).forEach(log => { Object.entries(log.data || {}).forEach(([type, subs]) => { Object.values(subs || {}).forEach(v => { if (type === "sales") s += v; else if (type === "expenses") e += v; }); }); });
-      const ml = bd.ml.find(l => l.month === m);
-      if (ml && ml.data && ml.data.fixed) Object.values(ml.data.fixed).forEach(v => f += v);
-      return { s, e, f, net: s - e - f };
+function showWeekCompare(){
+  var from=(document.getElementById("cmp-from")||{value:""}).value;
+  var to=(document.getElementById("cmp-to")||{value:""}).value;
+  if(!from||!to)return;
+  var weeks=[],cur=new Date(from),end=new Date(to);
+  while(cur<=end){
+    var ws=cur.toISOString().split("T")[0],we=new Date(cur);
+    we.setDate(we.getDate()+6);
+    if(we>end)we=new Date(end);
+    weeks.push({start:ws,end:we.toISOString().split("T")[0]});
+    cur.setDate(cur.getDate()+7);
+  }
+  if(!weeks.length)return;
+  var wData=weeks.map(function(w){
+    var total=0,bData=branches.map(function(b){
+      var bd=getBD(b.id),bs=0;
+      bd.dl.filter(function(l){return l.date>=w.start&&l.date<=w.end;}).forEach(function(log){
+        Object.entries(log.data||{}).forEach(function(e){if(e[0]==="sales")Object.values(e[1]||{}).forEach(function(v){bs+=v;});});
+      });
+      total+=bs;return{name:bn(b),icon:b.icon,sales:bs};
     });
-    return { b, mData };
+    return{start:w.start,end:w.end,total:total,bData:bData};
   });
-  const grandTotals = months.map((_, mi) => { let gs = 0, ge = 0, gf = 0; rows.forEach(({ mData }) => { gs += mData[mi].s; ge += mData[mi].e; gf += mData[mi].f; }); return { s: gs, e: ge, f: gf, net: gs - ge - gf }; });
-  const ths = months.map(m => `<th style="padding:8px 10px;text-align:center;font-size:11px;font-weight:700;background:#f1f5f9;border-bottom:2px solid var(--bdr)">${m.slice(5)}<br/><span style="font-weight:400;color:var(--sub)">${m.slice(0, 4)}</span></th>`).join("");
-  const brows = rows.map(({ b, mData }) => `
-    <tr><td style="padding:8px 10px;font-weight:700;font-size:13px;border-bottom:1px solid var(--bdr);white-space:nowrap">${b.icon} ${bn(b)}</td>
-      ${mData.map(d => `<td style="padding:7px 10px;text-align:center;font-size:12px;font-weight:600;color:${d.net >= 0 ? "var(--G)" : "var(--R)"};border-bottom:1px solid var(--bdr)">${fmt(d.net)}</td>`).join("")}
-    </tr>
-    <tr style="background:#fafafa"><td style="padding:4px 10px 8px 20px;font-size:11px;color:var(--sub);border-bottom:1px solid var(--bdr)">📈 Sales</td>
-      ${mData.map(d => `<td style="padding:4px 10px 8px;text-align:center;font-size:11px;color:var(--G);border-bottom:1px solid var(--bdr)">${fmt(d.s)}</td>`).join("")}
-    </tr>
-    <tr style="background:#fafafa"><td style="padding:4px 10px 8px 20px;font-size:11px;color:var(--sub);border-bottom:2px solid var(--bdr)">💸 Exp+Fixed</td>
-      ${mData.map(d => `<td style="padding:4px 10px 8px;text-align:center;font-size:11px;color:var(--R);border-bottom:2px solid var(--bdr)">${fmt(d.e + d.f)}</td>`).join("")}
-    </tr>`).join("");
-  const grand = `<tr style="background:#f0fdf4"><td style="padding:10px;font-weight:900;font-size:13px;border-top:3px solid var(--G)">💰 Total Net</td>
-    ${grandTotals.map(d => `<td style="padding:10px;text-align:center;font-weight:900;font-size:13px;color:${d.net >= 0 ? "var(--G)" : "var(--R)"};border-top:3px solid var(--G)">${fmt(d.net)}</td>`).join("")}
-  </tr>`;
-  // Week analysis
-  var allDates = [];
-  branches.forEach(function(b){ var bd=getBD(b.id); bd.dl.forEach(function(l){allDates.push(l.date);}); });
-  const minDate = allDates.sort()[0] || today();
-  
-  return `<button class="pdf-btn" onclick="window.print()">🖨️ Print PDF Report</button>
-    <div class="card" style="margin-bottom:12px">
-      <div style="font-weight:800;font-size:14px;margin-bottom:10px;color:#065f46">📅 Custom Date Range</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <div style="flex:1;min-width:130px"><div style="font-size:11px;color:var(--sub);margin-bottom:4px">From</div>
-        <input type="date" id="cmp-from" value="${minDate}" style="width:100%;padding:8px;border:2px solid var(--bdr);border-radius:9px;font-family:inherit;font-size:13px"/></div>
-        <div style="flex:1;min-width:130px"><div style="font-size:11px;color:var(--sub);margin-bottom:4px">To</div>
-        <input type="date" id="cmp-to" value="${today()}" style="width:100%;padding:8px;border:2px solid var(--bdr);border-radius:9px;font-family:inherit;font-size:13px"/></div>
-        <button onclick="showWeekCompare()" class="svbtn svbtn-g" style="margin-top:16px">📊 Compare Weeks</button>
-      </div>
-      <div id="week-compare-result" style="margin-top:12px"></div>
-    </div>
-    <div class="card" style="overflow-x:auto">
-      <div style="font-weight:800;font-size:14px;margin-bottom:12px;color:#065f46">📅 Month by Month Comparison</div>
-      <table class="compare-tbl">
-        <thead><tr><th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:700;background:#f1f5f9;border-bottom:2px solid var(--bdr)">Branch</th>${ths}</tr></thead>
-        <tbody>${brows}${grand}</tbody>
-      </table>
-    </div>
-    <div style="font-size:11px;color:var(--sub);text-align:center;padding:5px">Values in OMR · Green = Profit · Red = Loss</div>`;
+  var maxS=1;wData.forEach(function(w){if(w.total>maxS)maxS=w.total;});
+  var best=wData[0],worst=wData[0];
+  wData.forEach(function(w){if(w.total>best.total)best=w;if(w.total<worst.total)worst=w;});
+  var rows="";
+  wData.forEach(function(w,i){
+    var pct=Math.round((w.total/maxS)*100);
+    var isBest=wData.length>1&&w.start===best.start;
+    var isWorst=wData.length>1&&w.start===worst.start;
+    rows+='<div style="background:'+(isBest?"#f0fdf4":isWorst?"#fef2f2":"#f8fafc")+';border-radius:11px;padding:11px;margin-bottom:8px"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><div><div style="font-weight:700;font-size:12px">W'+(i+1)+': '+fmtDate(w.start)+' - '+fmtDate(w.end)+'</div>';
+    if(isBest)rows+='<span style="font-size:10px;background:#dcfce7;color:#166534;padding:1px 6px;border-radius:5px">Best</span>';
+    if(isWorst)rows+='<span style="font-size:10px;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:5px">Slowest</span>';
+    rows+='</div><div style="font-weight:900;font-size:14px;color:'+(isBest?"var(--G)":isWorst?"var(--R)":"var(--text)")+'">'+fmt(w.total)+' OMR</div></div><div style="background:#e5e7eb;border-radius:6px;height:7px;margin-bottom:5px"><div style="background:'+(isBest?"var(--G)":isWorst?"var(--R)":"var(--B)")+';height:7px;border-radius:6px;width:'+pct+'%"></div></div><div style="display:flex;gap:5px;flex-wrap:wrap">';
+    w.bData.forEach(function(b){rows+='<span style="font-size:11px;background:#fff;padding:2px 7px;border-radius:6px">'+b.icon+' '+fmt(b.sales)+'</span>';});
+    rows+='</div></div>';
+  });
+  var el=document.getElementById("week-compare-result");
+  if(el)el.innerHTML=rows;
 }
 
-// ── AI CHAT ──
 function rMgrAI() {
   return `<div class="ai-hdr">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
@@ -1247,9 +1230,14 @@ async function sendAIMsg() {
 
 async function askAI(question) {
   if (!claudeKey) {
-    claudeKey = prompt("Enter your Claude API Key to enable AI Analysis:") || "";
-    if (claudeKey) localStorage.setItem("claudeKey", claudeKey);
-    else return;
+    var msgs = document.getElementById("ai-messages");
+    if(msgs) {
+      var div = document.createElement("div");
+      div.style.cssText = "background:#fef3c7;border:2px solid #f59e0b;border-radius:12px;padding:12px;margin:8px 0;font-size:13px";
+      div.innerHTML = "<strong>⚠️ No API Key!</strong><br/>Please go to IT Admin → AI Settings and add your Claude API Key first.";
+      msgs.appendChild(div);
+    }
+    return;
   }
   addAIMessage("user", question);
   addAIMessage("assistant", "", true);
@@ -1393,6 +1381,20 @@ function renderIT() {
       <div style="margin-bottom:14px">
         <div style="font-size:12px;color:var(--sub);font-weight:600;margin-bottom:6px">⚙️ IT Password</div>
         <div class="pass-row"><input class="pass-inp" type="password" id="new-it-pass" placeholder="New password"/><button class="pass-btn" onclick="changePass('it')">Change</button></div>
+      </div>
+    </div>
+    <div class="it-card">
+      <div class="it-card-title">✏️ Edit Sales & Expenses</div>
+      <div style="margin-bottom:10px">
+        <div style="font-size:12px;color:var(--sub);margin-bottom:8px">Select branch and date to edit</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <select id="edit-branch" class="si" style="flex:1">
+            ${branches.map(b=>'<option value="'+b.id+'">'+b.icon+' '+bn(b)+'</option>').join('')}
+          </select>
+          <input type="date" id="edit-date" value="${today()}" class="si" style="flex:1"/>
+          <button class="sb sb-b" onclick="loadEditEntry()">Load</button>
+        </div>
+        <div id="edit-entry-area"></div>
       </div>
     </div>
     <div class="it-card">
@@ -1622,19 +1624,220 @@ function importPOS(input) {
 }
 
 
+
+// ══ TRANSFERS ══
+var transfers = JSON.parse(localStorage.getItem("transfers") || "[]");
+
+function rMgrTransfers() {
+  var total = 0;
+  transfers.forEach(function(t){ total += (t.amount||0); });
+  var rows = transfers.length ? transfers.map(function(t, i) {
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bdr)">' +
+      '<div><div style="font-weight:700;font-size:14px">💵 ' + fmt(t.amount) + ' OMR</div>' +
+      '<div style="font-size:11px;color:var(--sub)">' + fmtDate(t.date) + (t.note ? ' · ' + t.note : '') + '</div></div>' +
+      '<button onclick="deleteTransfer(' + i + ')" style="background:#fef2f2;color:var(--R);border:none;border-radius:8px;padding:5px 10px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">Del</button>' +
+      '</div>';
+  }).join("") : '<div class="empty"><div style="font-size:38px;margin-bottom:8px">💵</div><div>No transfers yet</div></div>';
+
+  return '<div class="card"><div class="card-title">💵 Add Transfer</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+    '<input type="number" id="tr-amount" inputmode="decimal" placeholder="Amount (OMR)" class="sinp" style="flex:1;min-width:110px"/>' +
+    '<input type="date" id="tr-date" value="' + today() + '" class="sinp" style="flex:1;min-width:120px"/>' +
+    '<input type="text" id="tr-note" placeholder="Note" class="sinp" style="flex:1;min-width:120px"/>' +
+    '<button class="svbtn svbtn-g" onclick="addTransfer()">+ Add</button>' +
+    '</div></div>' +
+    '<div class="card"><div class="card-title">📊 Total Received <span style="background:#f0fdf4;color:var(--G);padding:4px 10px;border-radius:8px;font-size:14px">' + fmt(total) + ' OMR</span></div>' +
+    rows + '</div>';
+}
+
+function addTransfer() {
+  var amount = parseFloat((document.getElementById("tr-amount")||{value:0}).value)||0;
+  var date = (document.getElementById("tr-date")||{value:today()}).value || today();
+  var note = ((document.getElementById("tr-note")||{value:""}).value||"").trim();
+  if(!amount){toast("Enter amount","#ef4444");return;}
+  transfers.unshift({amount:amount, date:date, note:note});
+  transfers.sort(function(a,b){return b.date.localeCompare(a.date);});
+  localStorage.setItem("transfers", JSON.stringify(transfers));
+  toast("Transfer added ✓");
+  renderMTab();
+}
+
+function deleteTransfer(i) {
+  transfers.splice(i,1);
+  localStorage.setItem("transfers", JSON.stringify(transfers));
+  toast("Deleted","#ef4444");
+  renderMTab();
+}
+
+// ══ SMART ALERTS ══
+function runSmartAlerts() {
+  var alerts = [];
+  var todayStr = today();
+  var d = new Date(); d.setDate(d.getDate()-1);
+  var yesterStr = d.toISOString().split("T")[0];
+
+  branches.forEach(function(b) {
+    var bd = getBD(b.id);
+    var hasToday = bd.dl.some(function(l){return l.date===todayStr;});
+    if(!hasToday) alerts.push("⚠️ " + bn(b) + ": No data entered today!");
+
+    var tlog = bd.dl.find(function(l){return l.date===todayStr;});
+    var ylog = bd.dl.find(function(l){return l.date===yesterStr;});
+    if(tlog && ylog) {
+      var ts=0, ys=0;
+      Object.entries(tlog.data||{}).forEach(function(e){if(e[0]==="sales")Object.values(e[1]||{}).forEach(function(v){ts+=v;});});
+      Object.entries(ylog.data||{}).forEach(function(e){if(e[0]==="sales")Object.values(e[1]||{}).forEach(function(v){ys+=v;});});
+      if(ys>0 && ts<ys*0.8) alerts.push("📉 " + bn(b) + ": Sales dropped " + Math.round((1-ts/ys)*100) + "% vs yesterday!");
+    }
+
+    var ms=0, me=0;
+    bd.dl.filter(function(l){return l.date.startsWith(curMonth());}).forEach(function(log){
+      Object.entries(log.data||{}).forEach(function(e){
+        if(e[0]==="sales")Object.values(e[1]||{}).forEach(function(v){ms+=v;});
+        if(e[0]==="expenses")Object.values(e[1]||{}).forEach(function(v){me+=v;});
+      });
+    });
+    if(ms>0 && me/ms>0.6) alerts.push("🔴 " + bn(b) + ": Expenses are " + Math.round(me/ms*100) + "% of sales!");
+  });
+
+  var msgs = document.getElementById("ai-messages");
+  if(!msgs) return;
+  if(!alerts.length) { addAIMessage("assistant","✅ No critical alerts! Everything looks good."); return; }
+  var alertHtml = alerts.map(function(a){return '<div style="padding:5px 0;border-bottom:1px solid #f1f5f9">'+a+'</div>';}).join("");
+  addAIMessage("assistant", "<strong>🚨 Smart Alerts (" + alerts.length + ")</strong><br/>" + alertHtml);
+}
+
+// ══ EXPORT EXCEL ══
+function exportToExcel() {
+  var rows = [["Branch","Date","Category","Item","Amount (OMR)"]];
+  branches.forEach(function(b) {
+    var bd = getBD(b.id);
+    bd.dl.forEach(function(log) {
+      Object.entries(log.data||{}).forEach(function(e) {
+        Object.entries(e[1]||{}).forEach(function(e2) {
+          if(e2[1]>0) rows.push([bn(b), log.date, e[0], e2[0], e2[1]]);
+        });
+      });
+    });
+    bd.ml.forEach(function(mlog) {
+      Object.entries(mlog.data||{}).forEach(function(e) {
+        Object.entries(e[1]||{}).forEach(function(e2) {
+          if(e2[1]>0) rows.push([bn(b), mlog.month, "fixed", e2[0], e2[1]]);
+        });
+      });
+    });
+  });
+  var csv = rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(",");}).join("\n");
+  var blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "chicklets_" + today() + ".csv";
+  a.click();
+  toast("Exported ✓");
+}
+
+// ══ EDIT SALES IN IT ══
+function loadEditEntry() {
+  var bid = (document.getElementById("edit-branch")||{value:""}).value;
+  var date = (document.getElementById("edit-date")||{value:""}).value;
+  if(!bid||!date){toast("Select branch and date","#ef4444");return;}
+  var savedBranch = curBranch;
+  curBranch = branches.find(function(b){return b.id===bid;});
+  if(!curBranch){curBranch=savedBranch;return;}
+  loadBD();
+  var log = dayLogs.find(function(l){return l.date===date;});
+  var area = document.getElementById("edit-entry-area");
+  if(!area){curBranch=savedBranch;loadBD();return;}
+  var rows = "";
+  Object.entries(dailyCats).forEach(function(e) {
+    var tk=e[0], cat=e[1];
+    rows += '<div style="margin-bottom:10px"><div style="font-weight:700;font-size:13px;color:'+cat.color+';margin-bottom:5px">'+cat.icon+' '+cat.en+'</div>';
+    cat.subs.forEach(function(s) {
+      var val = (log&&log.data&&log.data[tk]&&log.data[tk][s.en])||0;
+      rows += '<div class="srow"><div class="slbl">'+s.en+'</div>';
+      rows += '<input class="sinp" type="number" inputmode="decimal" id="eit-'+tk+'-'+s.en.replace(/ /g,'_')+'" value="'+val+'" placeholder="0"/></div>';
+    });
+    rows += '</div>';
+  });
+  area.innerHTML = '<div style="background:#f8fafc;border-radius:11px;padding:12px;margin-top:8px">'+
+    '<div style="font-weight:700;margin-bottom:10px">'+date+' — '+bn(curBranch)+'</div>'+rows+
+    '<button class="svbtn svbtn-g" style="width:100%;margin-top:8px" id="save-edit-btn">Save Changes</button></div>';
+  var btn = document.getElementById("save-edit-btn");
+  if(btn) btn.onclick = function(){ saveEditEntry(bid, date); };
+  curBranch=savedBranch; loadBD();
+}
+
+function saveEditEntry(bid, date) {
+  var savedBranch = curBranch;
+  curBranch = branches.find(function(b){return b.id===bid;});
+  if(!curBranch){return;}
+  loadBD();
+  var data = {};
+  Object.entries(dailyCats).forEach(function(e) {
+    var tk=e[0], cat=e[1]; data[tk]={};
+    cat.subs.forEach(function(s) {
+      var el = document.getElementById("eit-"+tk+"-"+s.en.replace(/ /g,'_'));
+      data[tk][s.en] = el ? (parseFloat(el.value)||0) : 0;
+    });
+  });
+  var ex = dayLogs.find(function(l){return l.date===date;});
+  if(ex){ex.data=data;}
+  else{dayLogs.unshift({id:nextId++,date:date,data:data});dayLogs.sort(function(a,b){return b.date.localeCompare(a.date);});}
+  saveBD();
+  var log = dayLogs.find(function(l){return l.date===date;});
+  if(log) sbSaveDayLog(bid, log);
+  toast("Saved by IT ✓");
+  curBranch=savedBranch; loadBD();
+  var area = document.getElementById("edit-entry-area");
+  if(area) area.innerHTML = '<div style="color:var(--G);font-weight:700;padding:10px">✅ Saved!</div>';
+}
+
+// ══ MGR NOTES ══
+function rMgrNotes() {
+  var allNotes = [];
+  branches.forEach(function(b) {
+    var key = b.id+"_notes";
+    var notes = JSON.parse(localStorage.getItem(key)||"[]");
+    notes.forEach(function(n){allNotes.push(Object.assign({branchName:bn(b),branchIcon:b.icon},n));});
+  });
+  allNotes.sort(function(a,b){return b.date.localeCompare(a.date);});
+  if(!allNotes.length) return '<div class="empty"><div style="font-size:38px;margin-bottom:8px">📝</div><div>No notes from branches</div></div>';
+  return '<div class="card"><div class="card-title">📝 Branch Notes</div>' +
+    allNotes.map(function(n){return '<div style="background:#f8fafc;border-radius:11px;padding:10px;margin-bottom:8px">'+
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'+
+      '<span>'+n.branchIcon+'</span><span style="font-weight:700;font-size:12px">'+n.branchName+'</span>'+
+      '<span style="font-size:11px;color:var(--sub);margin-left:auto">'+fmtDate(n.date)+'</span></div>'+
+      '<div style="font-size:13px">'+n.text+'</div></div>';}).join("")+'</div>';
+}
+
 document.addEventListener("DOMContentLoaded", async function() {
   // logos embedded directly in HTML
   itPass = localStorage.getItem("itPass") || "1234";
   mgrPass = localStorage.getItem("mgrPass") || "0000";
   // Set default API key if not already set
   if(!localStorage.getItem("claudeKey")){
-    localStorage.setItem("claudeKey", "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");
+    localStorage.setItem("claudeKey", "");
   }
-  claudeKey = localStorage.getItem("claudeKey") || "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";
+  claudeKey = localStorage.getItem("claudeKey") || "";
   showScreen("BS");
   renderBS();
   await sbLoadBranches();
-  restoreSession();
+  // Pre-load all branch data for Manager View
+  if(branches.length > 0) {
+    branches.forEach(async function(b) {
+      var dl = await sbLoadDayLogs(b.id);
+      var ml = await sbLoadMonthLogs(b.id);
+      if(dl && dl.length > 0) {
+        var dayData = dl.map(function(r){return {id:r.id, date:r.date, data:r.data||{}};});
+        dayData.sort(function(a,b){return b.date.localeCompare(a.date);});
+        localStorage.setItem(b.id+"_dl", JSON.stringify(dayData));
+      }
+      if(ml && ml.length > 0) {
+        var monthData = ml.map(function(r){return {id:r.id, month:r.month, data:r.data||{}, status:r.status||{}};});
+        localStorage.setItem(b.id+"_ml", JSON.stringify(monthData));
+      }
+    });
+  }
   setInterval(async function() {
     var data = await sbFetch("/rest/v1/branches?select=*&order=sort_order,id");
     if (data && data.length > 0) {
